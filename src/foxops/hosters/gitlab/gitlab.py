@@ -8,9 +8,14 @@ from pathlib import Path
 from tempfile import mkdtemp
 from typing import AsyncIterator, TypedDict
 from urllib.parse import quote_plus
+from pydantic import SecretStr
+from abc import ABC, abstractmethod
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
+from tenacity import retry
+from tenacity.retry import retry_if_exception_type
+from tenacity.stop import stop_after_delay
+from tenacity.wait import wait_fixed
 
 from foxops.engine import IncarnationState
 from foxops.engine.models import load_incarnation_state_from_string
@@ -61,15 +66,21 @@ def evaluate_gitlab_address(address: str) -> tuple[str, str]:
         return address, f"{address}/api/v4"
 
 
-class GitLab:
+class GitLab(ABC):
     """REST API client for GitLab"""
 
-    def __init__(self, address: str, token: str):
+    def __init__(self, address: str):
         self.web_address, self.api_address = evaluate_gitlab_address(address)
-        self.token = token
-        self.client = httpx.AsyncClient(
-            base_url=self.api_address, headers={"PRIVATE-TOKEN": self.token}, timeout=httpx.Timeout(120)
-        )
+
+    @property
+    @abstractmethod
+    def token(self) -> SecretStr:
+        pass
+
+    @property
+    @abstractmethod
+    def client(self) -> httpx.AsyncClient:
+        pass
 
     async def validate(self):
         (await self.client.get("/version")).raise_for_status()
@@ -162,7 +173,7 @@ class GitLab:
             metadata = await self.get_repository_metadata(repository)
             repository = metadata["http_url"]
 
-        clone_url = add_authentication_to_git_clone_url(repository, "__token__", self.token)
+        clone_url = add_authentication_to_git_clone_url(repository, "oauth2", self.token.get_secret_value())
 
         # we assume that `repository` is already a proper HTTP(S) URL
         local_clone_directory = Path(mkdtemp())
