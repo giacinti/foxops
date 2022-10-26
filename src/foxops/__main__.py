@@ -7,9 +7,8 @@ from foxops import __version__
 from foxops.dependencies import (
     get_dal,
     get_database_settings,
-    get_hoster,
     get_settings,
-    static_token_auth_scheme,
+    hoster_token_auth_scheme,
 )
 from foxops.error_handlers import __error_handlers__
 from foxops.logger import get_logger, setup_logging
@@ -33,10 +32,6 @@ def create_app():
 
     @app.on_event("startup")
     async def startup():
-
-        # validate hoster
-        hoster = get_hoster(settings)
-        await hoster.validate()
 
         # initialize database
         dal = get_dal(get_database_settings())
@@ -67,7 +62,7 @@ def create_app():
     public_router.include_router(auth.router)
 
     # Add routes to the protected router (authentication required)
-    protected_router = APIRouter(dependencies=[Depends(static_token_auth_scheme)])
+    protected_router = APIRouter(dependencies=[Depends(hoster_token_auth_scheme)])
     protected_router.include_router(incarnations.router)
 
     app.include_router(public_router)

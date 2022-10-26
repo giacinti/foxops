@@ -25,6 +25,7 @@ from foxops.external.git import (
     add_authentication_to_git_clone_url,
     git_exec,
 )
+from foxops.hosters.gitlab.settings import GitLabSettings
 from foxops.hosters.types import (
     GitSha,
     MergeRequestId,
@@ -69,8 +70,8 @@ def evaluate_gitlab_address(address: str) -> tuple[str, str]:
 class GitLab(ABC):
     """REST API client for GitLab"""
 
-    def __init__(self, address: str):
-        self.web_address, self.api_address = evaluate_gitlab_address(address)
+    def __init__(self, settings: GitLabSettings):
+        self.web_address, self.api_address = evaluate_gitlab_address(settings.address)
 
     @property
     @abstractmethod
@@ -413,3 +414,20 @@ class GitLab(ABC):
             params={"ref": ref},
         )
         return response.status_code == HTTPStatus.OK
+
+
+class AuthGitLab(GitLab):
+    def __init__(self, settings: GitLabSettings, token: SecretStr):
+        super().__init__(settings)
+        self.__token: SecretStr = token
+        self.__client: httpx.AsyncClient = httpx.AsyncClient(
+            base_url=self.api_address,
+            headers={"Authentication": f"Bearer {token.get_secret_value()}"},
+            timeout=httpx.Timeout(120)
+        )
+
+    def token(self) -> SecretStr:
+        return self.__token
+
+    def client(self) -> httpx.AsyncClient:
+        return self.__client

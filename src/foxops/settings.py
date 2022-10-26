@@ -14,7 +14,6 @@ class DatabaseSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
-    static_token: SecretStr
     frontend_dist_dir: Path = Path("ui/dist")
     log_level: str = "INFO"
 
