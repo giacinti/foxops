@@ -2,14 +2,14 @@ from functools import lru_cache
 from typing import Optional
 
 from pydantic import SecretStr
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status, APIRouter
 from fastapi.security.api_key import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import foxops.reconciliation as reconciliation
 from foxops.database import DAL
 from foxops.hosters import Hoster
-from foxops.hosters.gitlab import AuthGitLab, GitLabSettings, get_gitlab_settings
+from foxops.hosters.gitlab import AuthGitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
 from foxops.settings import DatabaseSettings, Settings
 
 # NOTE: Yes, you may absolutely use proper dependency injection at some point.
@@ -40,6 +40,10 @@ def get_dal(settings: DatabaseSettings = Depends(get_database_settings)) -> DAL:
 def get_hoster(request: Request, settings: GitLabSettings = Depends(get_gitlab_settings)) -> Hoster:
     token: str = request.headers.get("Authorization").removeprefix("Bearer")
     return AuthGitLab(settings, SecretStr(token))
+
+
+def get_hoster_auth_router() -> APIRouter:
+    return get_gitlab_auth_router()
 
 
 def get_reconciliation():

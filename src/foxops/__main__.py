@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
@@ -51,6 +52,8 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # session middleware is needed by authlib oauth
+    app.add_middleware(SessionMiddleware, secret_key="!secret")
 
     # Add exception handlers
     for exc_type, handler in __error_handlers__.items():
@@ -107,8 +110,8 @@ def main_dev():
         log_level="debug",
         debug=True,
         workers=1,
-        limit_concurrency=1,
-        limit_max_requests=1,
+        # limit_concurrency=1,
+        # limit_max_requests=1,
     )
 
 

@@ -1,4 +1,5 @@
 from pydantic import BaseSettings, SecretStr
+from functools import cache
 
 
 class GitLabSettings(BaseSettings):
@@ -10,3 +11,8 @@ class GitLabSettings(BaseSettings):
     class Config:
         env_prefix: str = "foxops_gitlab_"
         secrets_dir: str = "/var/run/secrets/foxops"
+
+
+@cache
+def get_gitlab_settings() -> GitLabSettings:
+    return GitLabSettings()  # type: ignore
