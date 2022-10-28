@@ -6,7 +6,7 @@ class GitLabSettings(BaseSettings):
     address: str
     client_id: str
     client_secret: SecretStr
-    client_scope: str = "api"
+    client_scope: str = "api openid profile email"
 
     class Config:
         env_prefix: str = "foxops_gitlab_"

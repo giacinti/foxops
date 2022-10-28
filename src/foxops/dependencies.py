@@ -1,9 +1,10 @@
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import SecretStr
-from fastapi import Depends, HTTPException, Request, status, APIRouter
+from pydantic import SecretStr, ValidationError
+from fastapi import Depends, HTTPException, Request, status, APIRouter, Header
 from fastapi.security.api_key import APIKeyHeader
+from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import foxops.reconciliation as reconciliation
@@ -11,6 +12,7 @@ from foxops.database import DAL
 from foxops.hosters import Hoster
 from foxops.hosters.gitlab import AuthGitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
 from foxops.settings import DatabaseSettings, Settings
+from foxops.jwt import JWTError, TokenData, decode_access_token
 
 # NOTE: Yes, you may absolutely use proper dependency injection at some point.
 
@@ -37,9 +39,30 @@ def get_dal(settings: DatabaseSettings = Depends(get_database_settings)) -> DAL:
     return DAL(async_engine)
 
 
-def get_hoster(request: Request, settings: GitLabSettings = Depends(get_gitlab_settings)) -> Hoster:
-    token: str = request.headers.get("Authorization").removeprefix("Bearer")
-    return AuthGitLab(settings, SecretStr(token))
+def get_hoster_token(*, authorization: str = Header(None)) -> SecretStr:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    scheme, token = get_authorization_scheme_param(authorization)
+    if scheme.lower() != "bearer":
+        raise credentials_exception
+    try:
+        token_data: Optional[TokenData] = decode_access_token(token)
+    except (ValidationError, JWTError):
+        raise credentials_exception
+    if not token_data:
+        raise credentials_exception
+    return token_data.hoster_token
+
+
+def get_hoster(
+    *,
+    settings: GitLabSettings = Depends(get_gitlab_settings),
+    hoster_token: SecretStr = Depends(get_hoster_token),
+) -> Hoster:
+    return AuthGitLab(settings, hoster_token)
 
 
 def get_hoster_auth_router() -> APIRouter:
