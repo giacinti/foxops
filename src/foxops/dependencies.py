@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 import foxops.reconciliation as reconciliation
 from foxops.database import DAL
 from foxops.hosters import Hoster
-from foxops.hosters.gitlab import AuthGitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
+from foxops.hosters.gitlab import GitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
 from foxops.settings import DatabaseSettings, Settings
 from foxops.jwt import JWTError, TokenData, decode_access_token
 
@@ -62,7 +62,7 @@ def get_hoster(
     settings: GitLabSettings = Depends(get_gitlab_settings),
     hoster_token: SecretStr = Depends(get_hoster_token),
 ) -> Hoster:
-    return AuthGitLab(settings, hoster_token)
+    return GitLab(settings, hoster_token)
 
 
 def get_hoster_auth_router() -> APIRouter:

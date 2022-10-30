@@ -9,7 +9,6 @@ from tempfile import mkdtemp
 from typing import AsyncIterator, TypedDict
 from urllib.parse import quote_plus
 from pydantic import SecretStr
-from abc import ABC, abstractmethod
 
 import httpx
 from tenacity import retry
@@ -67,21 +66,25 @@ def evaluate_gitlab_address(address: str) -> tuple[str, str]:
         return address, f"{address}/api/v4"
 
 
-class GitLab(ABC):
+class GitLab:
     """REST API client for GitLab"""
 
-    def __init__(self, settings: GitLabSettings):
+    def __init__(self, settings: GitLabSettings, token: SecretStr):
         self.web_address, self.api_address = evaluate_gitlab_address(settings.address)
+        self.__token: SecretStr = token
+        self.__client: httpx.AsyncClient = httpx.AsyncClient(
+            base_url=self.api_address,
+            headers={"Authorization": f"Bearer {token.get_secret_value()}"},
+            timeout=httpx.Timeout(120)
+        )
 
     @property
-    @abstractmethod
     def token(self) -> SecretStr:
-        pass
+        return self.__token
 
     @property
-    @abstractmethod
     def client(self) -> httpx.AsyncClient:
-        pass
+        return self.__client
 
     async def validate(self):
         (await self.client.get("/version")).raise_for_status()
@@ -414,20 +417,3 @@ class GitLab(ABC):
             params={"ref": ref},
         )
         return response.status_code == HTTPStatus.OK
-
-
-class AuthGitLab(GitLab):
-    def __init__(self, settings: GitLabSettings, token: SecretStr):
-        super().__init__(settings)
-        self.__token: SecretStr = token
-        self.__client: httpx.AsyncClient = httpx.AsyncClient(
-            base_url=self.api_address,
-            headers={"Authentication": f"Bearer {token.get_secret_value()}"},
-            timeout=httpx.Timeout(120)
-        )
-
-    def token(self) -> SecretStr:
-        return self.__token
-
-    def client(self) -> httpx.AsyncClient:
-        return self.__client
