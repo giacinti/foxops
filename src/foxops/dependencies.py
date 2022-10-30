@@ -1,14 +1,18 @@
 from functools import lru_cache
+from typing import Optional
 
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.openapi.models import APIKey, APIKeyIn
-from fastapi.security.base import SecurityBase
+from pydantic import SecretStr, ValidationError
+from fastapi import Depends, HTTPException, Request, status, APIRouter, Header
+from fastapi.security.api_key import APIKeyHeader
+from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import foxops.reconciliation as reconciliation
 from foxops.database import DAL
-from foxops.hosters import GitLab, Hoster
+from foxops.hosters import Hoster
+from foxops.hosters.gitlab import GitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
 from foxops.settings import DatabaseSettings, Settings
+from foxops.jwt import JWTError, TokenData, decode_access_token
 
 # NOTE: Yes, you may absolutely use proper dependency injection at some point.
 
@@ -18,7 +22,7 @@ async_engine: AsyncEngine | None = None
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore
 
 
 @lru_cache
@@ -35,37 +39,54 @@ def get_dal(settings: DatabaseSettings = Depends(get_database_settings)) -> DAL:
     return DAL(async_engine)
 
 
-def get_hoster(settings: Settings = Depends(get_settings)) -> Hoster:
-    return GitLab(
-        address=settings.gitlab_address,
-        token=settings.gitlab_token.get_secret_value(),
+def get_hoster_token(*, authorization: str = Header(None)) -> SecretStr:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+    scheme, token = get_authorization_scheme_param(authorization)
+    if scheme.lower() != "bearer":
+        raise credentials_exception
+    try:
+        token_data: Optional[TokenData] = decode_access_token(token)
+    except (ValidationError, JWTError):
+        raise credentials_exception
+    if not token_data:
+        raise credentials_exception
+    return token_data.hoster_token
+
+
+def get_hoster(
+    *,
+    settings: GitLabSettings = Depends(get_gitlab_settings),
+    hoster_token: SecretStr = Depends(get_hoster_token),
+) -> Hoster:
+    return GitLab(settings, hoster_token)
+
+
+def get_hoster_auth_router() -> APIRouter:
+    return get_gitlab_auth_router()
 
 
 def get_reconciliation():
     return reconciliation
 
 
-class StaticTokenHeaderAuth(SecurityBase):
+class HosterTokenHeaderAuth(APIKeyHeader):
     def __init__(self):
-        self.model = APIKey(**{"in": APIKeyIn.header}, name="Authorization")
-        self.scheme_name = self.__class__.__name__
+        super().__init__(name="Authorization")
 
-    async def __call__(self, request: Request, settings: Settings = Depends(get_settings)) -> None:
-        authorization_header: str | None = request.headers.get("Authorization")
+    async def __call__(self, request: Request):
+        authorization_header: Optional[str] = await super().__call__(request)
         if not authorization_header:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing Authorization header")
 
-        if not authorization_header.startswith("Bearer ") or not (
-            token := authorization_header.removeprefix("Bearer ")
-        ):
+        if not authorization_header.startswith("Bearer ") or not authorization_header.removeprefix("Bearer "):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Authorization header must start with 'Bearer ' followed by the token",
             )
 
-        if settings.static_token.get_secret_value() != token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is invalid")
 
-
-static_token_auth_scheme = StaticTokenHeaderAuth()
+hoster_token_auth_scheme: HosterTokenHeaderAuth = HosterTokenHeaderAuth()
