@@ -1,21 +1,23 @@
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
+from aiocache import Cache  # type: ignore
 
 from foxops import __version__
 from foxops.dependencies import (
     get_dal,
     get_database_settings,
-    get_hoster,
     get_settings,
-    static_token_auth_scheme,
+    hoster_token_auth_scheme,
 )
 from foxops.error_handlers import __error_handlers__
 from foxops.logger import get_logger, setup_logging
 from foxops.middlewares import request_id_middleware, request_time_middleware
 from foxops.openapi import custom_openapi
 from foxops.routers import auth, incarnations, not_found, version
+from foxops.auth import AuthData
 
 #: Holds the module logger instance
 logger = get_logger(__name__)
@@ -34,9 +36,9 @@ def create_app():
     @app.on_event("startup")
     async def startup():
 
-        # validate hoster
-        hoster = get_hoster(settings)
-        await hoster.validate()
+        # initialize authz cache
+        # simple memory cache, implies only one worker !
+        AuthData.initialize(Cache())
 
         # initialize database
         dal = get_dal(get_database_settings())
@@ -56,6 +58,8 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # session middleware is needed by authlib oauth
+    app.add_middleware(SessionMiddleware, secret_key="!secret")
 
     # Add exception handlers
     for exc_type, handler in __error_handlers__.items():
@@ -67,7 +71,7 @@ def create_app():
     public_router.include_router(auth.router)
 
     # Add routes to the protected router (authentication required)
-    protected_router = APIRouter(dependencies=[Depends(static_token_auth_scheme)])
+    protected_router = APIRouter(dependencies=[Depends(hoster_token_auth_scheme)])
     protected_router.include_router(incarnations.router)
 
     app.include_router(public_router)
@@ -112,8 +116,8 @@ def main_dev():
         log_level="debug",
         debug=True,
         workers=1,
-        limit_concurrency=1,
-        limit_max_requests=1,
+        # limit_concurrency=1,
+        # limit_max_requests=1,
     )
 
 
