@@ -5,17 +5,24 @@ from starlette.responses import RedirectResponse
 from authlib.integrations.starlette_client import OAuth, OAuthError  # type: ignore
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from foxops.jwt import get_jwt_settings, create_access_token
+from foxops.logger import get_logger
+
 from .settings import GitLabSettings, get_gitlab_settings
+
+#: Holds the module logger
+logger = get_logger(__name__)
 
 #: Holds the router for the gitlab authentication endpoints
 router = APIRouter()
 
+#: Hold static OAuth registry instance
+oauth = OAuth()
+
 
 def get_oauth_gitlab(settings: GitLabSettings = Depends(get_gitlab_settings)):
-    oauth = OAuth()
-
     conf_url = f"{settings.address}/.well-known/openid-configuration"
-    oauth.register(
+    # object is cached in OAuth registry
+    return oauth.register(
         name='gitlab',
         server_metadata_url=conf_url,
         client_id=settings.client_id,
@@ -24,7 +31,6 @@ def get_oauth_gitlab(settings: GitLabSettings = Depends(get_gitlab_settings)):
             'scope': settings.client_scope
         }
     )
-    return oauth.gitlab
 
 
 @router.get('/login')
