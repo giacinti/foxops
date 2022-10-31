@@ -12,7 +12,7 @@ from foxops.database import DAL
 from foxops.hosters import Hoster
 from foxops.hosters.gitlab import GitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
 from foxops.settings import DatabaseSettings, Settings
-from foxops.jwt import JWTError, TokenData, decode_access_token
+from foxops.jwt import JWTError, JWTSettings, TokenData, decode_access_token, get_jwt_settings
 
 # NOTE: Yes, you may absolutely use proper dependency injection at some point.
 
@@ -39,7 +39,10 @@ def get_dal(settings: DatabaseSettings = Depends(get_database_settings)) -> DAL:
     return DAL(async_engine)
 
 
-def get_hoster_token(*, authorization: str = Header(None)) -> SecretStr:
+def get_hoster_token(*,
+                     authorization: str = Header(None),
+                     jwt_settings: JWTSettings = Depends(get_jwt_settings),
+                     ) -> SecretStr:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -49,7 +52,7 @@ def get_hoster_token(*, authorization: str = Header(None)) -> SecretStr:
     if scheme.lower() != "bearer":
         raise credentials_exception
     try:
-        token_data: Optional[TokenData] = decode_access_token(token)
+        token_data: Optional[TokenData] = decode_access_token(jwt_settings, token)
     except (ValidationError, JWTError):
         raise credentials_exception
     if not token_data:
