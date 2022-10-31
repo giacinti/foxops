@@ -1,3 +1,5 @@
+from functools import cache
+import secrets
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 from pydantic import BaseModel, BaseSettings, SecretStr, EmailStr
@@ -7,7 +9,7 @@ from jose.exceptions import JWTError as JWTError  # type: ignore # noqa: F401
 
 
 class JWTSettings(BaseSettings):
-    secret_key: SecretStr
+    secret_key: SecretStr = SecretStr(secrets.token_hex(32))
     algorithm: str = "HS256"
     token_expire: int = 30  # 30 minutes
 
@@ -16,7 +18,9 @@ class JWTSettings(BaseSettings):
         secrets_dir = "/var/run/secrets/foxops"
 
 
-settings = JWTSettings()  # type: ignore
+@cache
+def get_jwt_settings() -> JWTSettings:
+    return JWTSettings()  # type: ignore
 
 
 class TokenData(BaseModel):
@@ -27,7 +31,8 @@ class TokenData(BaseModel):
     user_email: EmailStr
 
 
-def create_access_token(data: dict,
+def create_access_token(settings: JWTSettings,
+                        data: dict,
                         expiration: Union[datetime, timedelta, None] = None
                         ) -> str:
     to_encode: dict = data.copy()
@@ -47,7 +52,8 @@ def create_access_token(data: dict,
     return encoded_jwt
 
 
-def decode_access_token(token: str) -> Optional[TokenData]:
+def decode_access_token(settings: JWTSettings,
+                        token: str) -> Optional[TokenData]:
     token_data: Optional[TokenData] = None
     payload: dict[str, Any] = jwt.decode(token,
                                          settings.secret_key.get_secret_value(),
