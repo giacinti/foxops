@@ -11,7 +11,6 @@ from .settings import GitLabSettings, get_gitlab_settings
 router = APIRouter()
 
 
-@cache
 def get_oauth_gitlab(settings: GitLabSettings = Depends(get_gitlab_settings)):
     oauth = OAuth()
 
