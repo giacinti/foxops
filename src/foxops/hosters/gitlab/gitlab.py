@@ -1,6 +1,8 @@
 import asyncio
 import base64
 import shutil
+import os
+import stat
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from http import HTTPStatus
@@ -56,6 +58,15 @@ class LastCommitPipeline(TypedDict):
 class Commit(TypedDict):
     last_pipeline: dict | None
     status: str
+
+
+# to overcome potential issue on Windows
+# defining a function that force removes read only documents
+# source: https://www.pythonpool.com/python-shutil-rmtree/
+def remove_read_only(func, path, excinfo):
+    # Using os.chmod with stat.S_IWRITE to allow write permissions
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 
 def evaluate_gitlab_address(address: str) -> tuple[str, str]:
@@ -229,7 +240,7 @@ class GitLab:
 
             yield GitRepository(local_clone_directory)
         finally:
-            shutil.rmtree(local_clone_directory)
+            shutil.rmtree(local_clone_directory, onerror=remove_read_only)
 
     async def has_pending_incarnation_branch(self, project_identifier: str, branch: str) -> GitSha | None:
         response = await self.client.get(
