@@ -46,6 +46,8 @@ async def login(request: Request,
 
 @router.get('/token')
 async def token(request: Request,
+                code: str,  # not used but here for proper openapi documentation
+                state: str,  # idem
                 gitlab=Depends(get_oauth_gitlab),
                 jwt_settings=Depends(get_jwt_settings),
                 ) -> str:

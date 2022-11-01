@@ -14,7 +14,7 @@ from foxops.models import (
     IncarnationBasic,
     IncarnationWithDetails,
 )
-from foxops.models.errors import ApiError
+from foxops.models.errors import ApiError, AuthError
 
 #: Holds the router for the incarnations API endpoints
 router = APIRouter(prefix="/api/incarnations", tags=["incarnations"])
@@ -33,6 +33,10 @@ logger = get_logger(__name__)
         status.HTTP_400_BAD_REQUEST: {
             "description": "The `incarnation_repository` and `target_directory` settings where inconsistent",
             "model": ApiError,
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Could not validate credentials",
+            "model": AuthError,
         },
         status.HTTP_404_NOT_FOUND: {
             "description": "An incarnation with the `incarnation_repository` and `target_directory` does not exist",
@@ -81,6 +85,10 @@ async def list_incarnations(
             "description": "The desired incarnation state was not valid or the incarnation already exists "
             "and import was not allowed.",
             "model": ApiError,
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Could not validate credentials",
+            "model": AuthError,
         },
         status.HTTP_409_CONFLICT: {
             "description": "The incarnation is already initialized and has a template configuration mismatch.",
@@ -174,6 +182,10 @@ async def read_incarnation(
             "description": "The desired incarnation state was not valid",
             "model": ApiError,
         },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Could not validate credentials",
+            "model": AuthError,
+        },
         status.HTTP_404_NOT_FOUND: {
             "description": "The incarnation was not found in the inventory",
             "model": ApiError,
@@ -226,6 +238,10 @@ async def update_incarnation(
         status.HTTP_204_NO_CONTENT: {
             "description": "The incarnation was successfully deleted",
         },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Could not validate credentials",
+            "model": AuthError,
+        },
         status.HTTP_404_NOT_FOUND: {
             "description": "The incarnation was not found in the inventory",
             "model": ApiError,
@@ -240,6 +256,7 @@ async def delete_incarnation(
     response: Response,
     incarnation_id: int,
     dal: DAL = Depends(get_dal),
+    hoster: Hoster = Depends(get_hoster),  # not used, just for authorization check
 ):
     """Deletes the incarnation from the inventory.
 
