@@ -43,20 +43,27 @@ def get_hoster_token(*,
                      authorization: str = Header(None),
                      jwt_settings: JWTSettings = Depends(get_jwt_settings),
                      ) -> SecretStr:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     scheme, token = get_authorization_scheme_param(authorization)
     if scheme.lower() != "bearer":
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+            detail="Token scheme must be Bearer"
+        )
     try:
         token_data: Optional[TokenData] = decode_access_token(jwt_settings, token)
-    except (ValidationError, JWTError):
-        raise credentials_exception
+    except (ValidationError, JWTError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+            detail=f"{e}"
+        )
     if not token_data:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+            detail="unknown error"
+        )
     return token_data.hoster_token
 
 
