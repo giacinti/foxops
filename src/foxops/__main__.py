@@ -38,6 +38,7 @@ def create_app():
 
         # initialize authz cache
         # simple memory cache, implies only one worker !
+        # in the future we can also use Redis, just need to be changed here
         AuthData.initialize(Cache())
 
         # initialize database

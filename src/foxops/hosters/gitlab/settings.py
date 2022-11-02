@@ -3,6 +3,9 @@ from functools import cache
 
 
 class GitLabSettings(BaseSettings):
+    """Gitlab specific settings.
+    client_id & client_secret are generated when registering foxops as OAuth application
+    """
     address: str
     client_id: str
     client_secret: SecretStr

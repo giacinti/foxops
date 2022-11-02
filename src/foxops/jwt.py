@@ -9,9 +9,10 @@ from jose.exceptions import JWTError as JWTError  # type: ignore # noqa: F401
 
 
 class JWTSettings(BaseSettings):
+    """ JWT token specific settings"""
     secret_key: SecretStr = SecretStr(secrets.token_hex(32))
     algorithm: str = "HS256"
-    token_expire: int = 30  # 30 minutes
+    token_expire: int = 100  # 100min - a bit less than hoster(Gitlab) token expiration (7200s=120min)
 
     class Config:
         env_prefix = "foxops_jwt_"
@@ -24,6 +25,7 @@ def get_jwt_settings() -> JWTSettings:
 
 
 class JWTTokenData(BaseModel):
+    """JWT token model"""
     sub: str
     scopes: List[str] = []
 
@@ -32,6 +34,7 @@ def create_jwt_token(settings: JWTSettings,
                      data: JWTTokenData,
                      expiration: Union[datetime, timedelta, None] = None
                      ) -> str:
+    """returns encoded JWT token"""
     to_encode: dict = data.dict().copy()
     if expiration:
         if isinstance(expiration, datetime):
@@ -51,6 +54,7 @@ def create_jwt_token(settings: JWTSettings,
 
 def decode_jwt_token(settings: JWTSettings,
                      token: str) -> Optional[JWTTokenData]:
+    """decodes JWT token. Signature is verified"""
     payload: dict[str, Any] = jwt.decode(token,
                                          settings.secret_key.get_secret_value(),
                                          algorithms=[settings.algorithm])

@@ -10,6 +10,7 @@ from foxops.jwt import JWTSettings, JWTTokenData, JWTError, get_jwt_settings, de
 
 
 class AuthHTTPException(HTTPException):
+    """Authorization HTTP exception"""
     def __init__(self, **kwargs):
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -19,6 +20,12 @@ class AuthHTTPException(HTTPException):
 
 
 class AuthData(BaseModel):
+    """This class represent the authorization data.
+    It contains the user information (out of oidc, minimum email_address)
+    and host access token (auth & refresh)
+    Data is cached locally, user email address is used as key
+    It is necessary to avoid exposing hoster token
+    """
     cache: ClassVar[Optional[Cache]] = None
 
     user: User
@@ -49,6 +56,7 @@ async def get_auth_data(*,
                         authorization: str = Header(None),
                         jwt_settings: JWTSettings = Depends(get_jwt_settings),
                         ) -> AuthData:
+    """extracts user email from JWT token and use it as key to get authorization data"""
     scheme, token = get_authorization_scheme_param(authorization)
     if scheme.lower() != "bearer":
         raise AuthHTTPException(detail="token scheme must be Bearer")
@@ -69,6 +77,7 @@ async def get_auth_data(*,
 async def get_hoster_token(*,
                            auth_data: AuthData = Depends(get_auth_data)
                            ) -> Optional[SecretStr]:
+    """returns hoster authoization token"""
     return auth_data.hoster_token
 
 
@@ -76,6 +85,7 @@ async def get_current_user(*,
                            security_scopes: SecurityScopes,
                            auth_data: AuthData = Depends(get_auth_data)
                            ) -> Optional[User]:
+    """current user - check if she has enough permissions (scopes)"""
     user = auth_data.user
     for scope in security_scopes.scopes:
         if scope not in user.scopes:
