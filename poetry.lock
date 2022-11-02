@@ -1,4 +1,21 @@
 [[package]]
+name = "aiocache"
+version = "0.11.1"
+description = "multi backend asyncio cache"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+aiomcache = {version = ">=0.5.2", optional = true, markers = "extra == \"memcached\""}
+
+[package.extras]
+dev = ["asynctest (>=0.11.0)", "black", "codecov", "coverage", "flake8", "ipdb", "marshmallow", "pystache", "pytest", "pytest-asyncio", "pytest-mock", "sphinx", "sphinx-autobuild", "sphinx-rtd-theme"]
+memcached = ["aiomcache (>=0.5.2)"]
+msgpack = ["msgpack (>=0.5.5)"]
+redis = ["aioredis (>=0.3.3)", "aioredis (>=1.0.0)"]
+
+[[package]]
 name = "aiofile"
 version = "3.8.1"
 description = "Asynchronous file operations."
@@ -11,6 +28,14 @@ caio = ">=0.9.0,<0.10.0"
 
 [package.extras]
 develop = ["aiomisc", "pytest", "pytest-cov"]
+
+[[package]]
+name = "aiomcache"
+version = "0.7.0"
+description = "Minimal pure python memcached client"
+category = "main"
+optional = false
+python-versions = ">=3.7"
 
 [[package]]
 name = "aiopath"
@@ -1300,11 +1325,19 @@ standard = ["colorama (>=0.4)", "httptools (>=0.4.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "884a1621a6035259a7603d9ccac92c7310662f3956e9303b01b2783d6f11ae0f"
+content-hash = "b361750840edbd1e85687c8711cbaac5fcea76b1f2660a058bdd92a2a052b242"
 
 [metadata.files]
+aiocache = [
+    {file = "aiocache-0.11.1-py2.py3-none-any.whl", hash = "sha256:e55c7caaa5753794fd301c3a2e592737fa1d036db9f8d04ae154facdfb48a157"},
+    {file = "aiocache-0.11.1.tar.gz", hash = "sha256:f2ebe0b05cec45782e7b5ea0bb74640f157dd4bb1028b4565364dda9fe33be7f"},
+]
 aiofile = [
     {file = "aiofile-3.8.1.tar.gz", hash = "sha256:1623b98d88fbd16bbd2808d010de4e185a700e950ed3f17455dd851aa2455f40"},
+]
+aiomcache = [
+    {file = "aiomcache-0.7.0-py3-none-any.whl", hash = "sha256:c10de62da84cd1aa5c11b959ff7b6f4fe923699b694b0d71854e6a9867256314"},
+    {file = "aiomcache-0.7.0.tar.gz", hash = "sha256:a73fd33bc9b4b2dad051d2b7ad0d14087491d87eb0a3d741c9c51a53665bf500"},
 ]
 aiopath = [
     {file = "aiopath-0.6.10-py2.py3-none-any.whl", hash = "sha256:44a5376de098b4875eefa4b4599f5ac99fd9451b88c314f237716571e16ccce2"},

@@ -1,8 +1,8 @@
 from functools import cache
 import secrets
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union
-from pydantic import BaseModel, BaseSettings, SecretStr, EmailStr
+from typing import Any, Optional, Union, List
+from pydantic import BaseModel, BaseSettings, SecretStr
 
 from jose import jwt  # type: ignore
 from jose.exceptions import JWTError as JWTError  # type: ignore # noqa: F401
@@ -23,19 +23,16 @@ def get_jwt_settings() -> JWTSettings:
     return JWTSettings()  # type: ignore
 
 
-class TokenData(BaseModel):
-    token_type: str
-    exp: Union[datetime, timedelta, None]
-    hoster_token: SecretStr
-    refresh_token: SecretStr
-    user_email: EmailStr
+class JWTTokenData(BaseModel):
+    sub: str
+    scopes: List[str] = []
 
 
-def create_access_token(settings: JWTSettings,
-                        data: dict,
-                        expiration: Union[datetime, timedelta, None] = None
-                        ) -> str:
-    to_encode: dict = data.copy()
+def create_jwt_token(settings: JWTSettings,
+                     data: JWTTokenData,
+                     expiration: Union[datetime, timedelta, None] = None
+                     ) -> str:
+    to_encode: dict = data.dict().copy()
     if expiration:
         if isinstance(expiration, datetime):
             expire: datetime = expiration
@@ -52,11 +49,9 @@ def create_access_token(settings: JWTSettings,
     return encoded_jwt
 
 
-def decode_access_token(settings: JWTSettings,
-                        token: str) -> Optional[TokenData]:
-    token_data: Optional[TokenData] = None
+def decode_jwt_token(settings: JWTSettings,
+                     token: str) -> Optional[JWTTokenData]:
     payload: dict[str, Any] = jwt.decode(token,
                                          settings.secret_key.get_secret_value(),
                                          algorithms=[settings.algorithm])
-    token_data = TokenData(**payload)
-    return token_data
+    return JWTTokenData(**payload)

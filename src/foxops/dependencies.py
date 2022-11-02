@@ -1,10 +1,9 @@
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import SecretStr, ValidationError
-from fastapi import Depends, HTTPException, Request, status, APIRouter, Header
+from pydantic import SecretStr
+from fastapi import Depends, HTTPException, Request, status, APIRouter
 from fastapi.security.api_key import APIKeyHeader
-from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import foxops.reconciliation as reconciliation
@@ -12,7 +11,7 @@ from foxops.database import DAL
 from foxops.hosters import Hoster
 from foxops.hosters.gitlab import GitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
 from foxops.settings import DatabaseSettings, Settings
-from foxops.jwt import JWTError, JWTSettings, TokenData, decode_access_token, get_jwt_settings
+from foxops.auth import get_hoster_token
 
 # NOTE: Yes, you may absolutely use proper dependency injection at some point.
 
@@ -37,34 +36,6 @@ def get_dal(settings: DatabaseSettings = Depends(get_database_settings)) -> DAL:
         async_engine = create_async_engine(settings.url.get_secret_value(), future=True, echo=False, pool_pre_ping=True)
 
     return DAL(async_engine)
-
-
-def get_hoster_token(*,
-                     authorization: str = Header(None),
-                     jwt_settings: JWTSettings = Depends(get_jwt_settings),
-                     ) -> SecretStr:
-    scheme, token = get_authorization_scheme_param(authorization)
-    if scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": "Bearer"},
-            detail="Token scheme must be Bearer"
-        )
-    try:
-        token_data: Optional[TokenData] = decode_access_token(jwt_settings, token)
-    except (ValidationError, JWTError) as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": "Bearer"},
-            detail=f"{e}"
-        )
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": "Bearer"},
-            detail="unknown error"
-        )
-    return token_data.hoster_token
 
 
 def get_hoster(

@@ -49,6 +49,7 @@ authlib = "^1.1.0"
 itsdangerous = "^2.1.2"
 email-validator = "^1.3.0"
 python-jose = "^3.3.0"
+aiocache = {extras = ["memcached"], version = "^0.11.1"}
 
 [tool.poetry.dev-dependencies]
 # Linting

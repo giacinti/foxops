@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
+from aiocache import Cache  # type: ignore
 
 from foxops import __version__
 from foxops.dependencies import (
@@ -16,6 +17,7 @@ from foxops.logger import get_logger, setup_logging
 from foxops.middlewares import request_id_middleware, request_time_middleware
 from foxops.openapi import custom_openapi
 from foxops.routers import auth, incarnations, not_found, version
+from foxops.auth import AuthData
 
 #: Holds the module logger instance
 logger = get_logger(__name__)
@@ -33,6 +35,10 @@ def create_app():
 
     @app.on_event("startup")
     async def startup():
+
+        # initialize authz cache
+        # simple memory cache, implies only one worker !
+        AuthData.initialize(Cache())
 
         # initialize database
         dal = get_dal(get_database_settings())

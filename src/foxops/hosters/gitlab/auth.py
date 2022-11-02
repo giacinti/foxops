@@ -1,10 +1,14 @@
 from typing import Optional, Dict
-from pydantic import AnyUrl
+from pydantic import AnyUrl, ValidationError
 from functools import cache
 from starlette.responses import RedirectResponse
 from authlib.integrations.starlette_client import OAuth, OAuthError  # type: ignore
-from fastapi import APIRouter, Request, HTTPException, status, Depends
-from foxops.jwt import get_jwt_settings, create_access_token
+from authlib.oidc.core.claims import UserInfo  # type: ignore
+from fastapi import APIRouter, Request, Depends
+
+from foxops.models import User
+from foxops.jwt import JWTTokenData, get_jwt_settings, create_jwt_token
+from foxops.auth import AuthHTTPException, AuthData
 from foxops.logger import get_logger
 
 from .settings import GitLabSettings, get_gitlab_settings
@@ -53,19 +57,22 @@ async def token(request: Request,
                 ) -> str:
     try:
         access_token: Dict = await gitlab.authorize_access_token(request)  # type: ignore
-    except OAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"{e}",
-            headers={'WWW-Authenticate': 'Bearer'},
+        user_info: UserInfo = await gitlab.userinfo(token=access_token)
+        user = User(**user_info)
+        # TODO: get scopes from database?
+        user.scopes = ['user']
+        await AuthData.register(
+            AuthData(
+                user=user,
+                hoster_token=access_token['access_token'],
+                refresh_token=access_token['refresh_token']
+            )
         )
-    data = {
-        'token_type': 'Bearer',
-        'hoster_token': access_token['access_token'],
-        'refresh_token': access_token['refresh_token'],
-        'user_email': access_token['userinfo']['email']
-    }
-    return create_access_token(settings=jwt_settings, data=data)
+    except (OAuthError, ValidationError) as e:
+        raise AuthHTTPException(detail=f"{e}")
+
+    data = JWTTokenData(sub=user.email, scopes=user.scopes)
+    return create_jwt_token(settings=jwt_settings, data=data)
 
 
 @cache
