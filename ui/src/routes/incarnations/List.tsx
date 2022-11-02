@@ -8,6 +8,7 @@ import { Hug } from '../../components/common/Hug/Hug'
 import { IconButton } from '../../components/common/IconButton/IconButton'
 import { Loader } from '../../components/common/Loader/Loader'
 import { IncarnationBase, incarnations } from '../../services/incarnations'
+import { AuthError } from '../../services/api'
 import { useToolbarSearchStore } from '../../stores/toolbar-search'
 import { searchBy } from '../../utils'
 import { Section } from './parts'
@@ -15,6 +16,7 @@ import { SortDown } from '../../components/common/Icons/SortDown'
 import { SortUp } from '../../components/common/Icons/SortUp'
 import { Sort } from '../../components/common/Icons/Sort'
 import { IncarnationItem } from './Item'
+import { useAuthStore } from '../../stores/auth'
 
 type SortBy = 'incarnationRepository' | 'targetDirectory'
 interface SortStore {
@@ -71,8 +73,13 @@ const NoResults = () => (
 
 export const IncarnationsList = () => {
   const { search } = useToolbarSearchStore()
-  const { isLoading, isError, data, isSuccess } = useQuery(['incarnations'], incarnations.get) // TODO: wrap it to useIncarnationsQuery
+  const { isLoading, isError, data, isSuccess, error } = useQuery<Promise<any>, AuthError>(['incarnations'], incarnations.get) // TODO: wrap it to useIncarnationsQuery
   const navigate = useNavigate()
+  const { setToken } = useAuthStore()
+  if (isError && error.status === 401) {
+    setToken(null)
+    navigate('/login?message=Authorization error('+error.detail+'). Please try to login again')
+  }
   const pendingMessage = isLoading
     ? 'Loading...'
     : isError

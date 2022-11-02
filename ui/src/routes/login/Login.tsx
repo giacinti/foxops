@@ -1,11 +1,11 @@
 import styled from '@emotion/styled'
+// import Alert from '@mui/material/Alert' - would be nice but not working for now... :-(
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../../stores/auth'
 import { Button } from '../../components/common/Button/Button'
 import { Hug } from '../../components/common/Hug/Hug'
 import { Logo } from '../../components/common/Logo/Logo'
-import { TextField } from '../../components/common/TextField/TextField'
 import { api } from '../../services/api'
 import { auth } from '../../services/auth'
 
@@ -36,7 +36,8 @@ export const Login = () => {
   const [searchParams, setSearchParam] = useSearchParams()
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const login_url = `/auth/login?redirect_uri=${window.location.href}`
+  const message = searchParams.get('message')
+  const login_url = `/auth/login?redirect_uri=${window.location.href.split('?')[0]}` // remove parameters if any
 
   useEffect(() => {
     if (code && state) getToken()
@@ -73,6 +74,7 @@ export const Login = () => {
         <Hug mb={40}>
           <Logo size={62} />
         </Hug>
+        <Hug>{message}</Hug>
         <Button loading={loading} type="submit" data-testid="Login-Button" style={{ borderRadius: 20, width: '100%' }}>
           Login
         </Button>
