@@ -28,6 +28,7 @@ const FormComponent = styled.form({
   }
 })
 
+
 export const Login = () => {
   const loginRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
@@ -36,7 +37,6 @@ export const Login = () => {
   const [searchParams, setSearchParam] = useSearchParams()
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const message = searchParams.get('message')
   const login_url = `/auth/login?redirect_uri=${window.location.href.split('?')[0]}` // remove parameters if any
 
   useEffect(() => {
@@ -74,7 +74,6 @@ export const Login = () => {
         <Hug mb={40}>
           <Logo size={62} />
         </Hug>
-        <Hug>{message}</Hug>
         <Button loading={loading} type="submit" data-testid="Login-Button" style={{ borderRadius: 20, width: '100%' }}>
           Login
         </Button>

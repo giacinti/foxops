@@ -1,6 +1,7 @@
 import { Global, ThemeProvider } from '@emotion/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import toast, { Toast, Toaster } from 'react-hot-toast'
 import { EnterScreen } from './components/EnterScreen/EnterScreen'
 import { IncarnationsList } from './routes/incarnations/List'
 import { Login } from './routes/login/Login'
@@ -10,14 +11,36 @@ import { THEMES } from './styling/themes'
 import { CreateIncarnationForm } from './routes/incarnations/CreateForm'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { EditIncarnationForm } from './routes/incarnations/EditForm'
+import { AuthError } from './services/api'
 
-const queryClient = new QueryClient()
+const authError = (err: AuthError) => {
+  toast.error(
+    <div>
+    <b>Authorization Error</b><br />
+    (<i>{err.detail}</i>)<br /><br />
+    Please logout and login again<br />
+    </div>,
+    {
+      duration: 5000
+    }
+  )
+}
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      const auth_error = (error as AuthError)
+      if (auth_error.status === 401) authError(auth_error)
+    }
+  })
+})
 
 function App() {
   const { mode } = useThemeModeStore()
   const theme = THEMES[mode]
   const globalStyles = createGlobalStyles(theme)
   return (
+    <>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <Global styles={globalStyles} />
@@ -35,6 +58,8 @@ function App() {
       </ThemeProvider>
       <ReactQueryDevtools position="bottom-right" />
     </QueryClientProvider>
+    <Toaster position="top-center" reverseOrder={true} />
+    </>
   )
 }
 
