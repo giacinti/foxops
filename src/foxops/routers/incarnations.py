@@ -1,7 +1,8 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, Security, Response, status
+from fastapi import APIRouter, Depends, Response, Security, status
 
+from foxops.auth import get_current_user
 from foxops.database import DAL
 from foxops.dependencies import get_dal, get_hoster, get_reconciliation
 from foxops.errors import IncarnationAlreadyInitializedError, IncarnationNotFoundError
@@ -16,7 +17,6 @@ from foxops.models import (
     User,
 )
 from foxops.models.errors import ApiError, AuthError
-from foxops.auth import get_current_user
 
 #: Holds the router for the incarnations API endpoints
 router = APIRouter(prefix="/api/incarnations", tags=["incarnations"])
@@ -52,7 +52,7 @@ async def list_incarnations(
     target_directory: str = ".",
     dal: DAL = Depends(get_dal),
     hoster: Hoster = Depends(get_hoster),
-    user: User = Security(get_current_user, scopes=['user']),
+    user: User = Security(get_current_user, scopes=["user"]),
 ) -> list[IncarnationBasic] | ApiError:
     """Returns a list of all known incarnations.
 
@@ -109,7 +109,7 @@ async def create_incarnation(
     allow_import: bool = False,
     dal: DAL = Depends(get_dal),
     hoster: Hoster = Depends(get_hoster),
-    user: User = Security(get_current_user, scopes=['user']),
+    user: User = Security(get_current_user, scopes=["user"]),
     reconciliation=Depends(get_reconciliation),
 ) -> IncarnationWithDetails | ApiError:
     """Initializes a new incarnation and adds it to the inventory.
@@ -164,7 +164,7 @@ async def read_incarnation(
     incarnation_id: int,
     dal: DAL = Depends(get_dal),
     hoster: Hoster = Depends(get_hoster),
-    user: User = Security(get_current_user, scopes=['user']),
+    user: User = Security(get_current_user, scopes=["user"]),
 ) -> IncarnationWithDetails | ApiError:
     """Returns the details of the incarnation from the inventory."""
     try:
@@ -211,7 +211,7 @@ async def update_incarnation(
     desired_incarnation_state_patch: DesiredIncarnationStatePatch,
     dal: DAL = Depends(get_dal),
     hoster: Hoster = Depends(get_hoster),
-    user: User = Security(get_current_user, scopes=['user']),
+    user: User = Security(get_current_user, scopes=["user"]),
     reconciliation=Depends(get_reconciliation),
 ) -> IncarnationWithDetails | ApiError:
     """Reconciles the incarnation.
@@ -263,7 +263,7 @@ async def delete_incarnation(
     incarnation_id: int,
     dal: DAL = Depends(get_dal),
     hoster: Hoster = Depends(get_hoster),  # not used, just for authorization check
-    user: User = Security(get_current_user, scopes=['user']),
+    user: User = Security(get_current_user, scopes=["user"]),
 ):
     """Deletes the incarnation from the inventory.
 

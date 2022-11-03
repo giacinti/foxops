@@ -16,7 +16,7 @@ import { AuthError } from './services/api'
 const authError = (err: AuthError) => {
   toast.error(
     <div>
-    <b>Authorization Error</b><br />
+      <b>Authorization Error</b><br />
     (<i>{err.detail}</i>)<br /><br />
     Please logout and login again<br />
     </div>,
@@ -28,7 +28,7 @@ const authError = (err: AuthError) => {
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: error => {
       const auth_error = (error as AuthError)
       if (auth_error.status === 401) authError(auth_error)
     }
@@ -41,24 +41,24 @@ function App() {
   const globalStyles = createGlobalStyles(theme)
   return (
     <>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <Global styles={globalStyles} />
-        <BrowserRouter>
-          <Routes>
-            <Route path="*" element={<EnterScreen />}>
-              <Route path="incarnations" element={<IncarnationsList />} />
-              <Route path="incarnations/create" element={<CreateIncarnationForm />} />
-              <Route path="incarnations/:id" element={<EditIncarnationForm />} />
-              <Route path="*" element={<Navigate to="/incarnations" />} />
-            </Route>
-            <Route path="/login" element={<Login />} />
-          </Routes>
-        </BrowserRouter>
-      </ThemeProvider>
-      <ReactQueryDevtools position="bottom-right" />
-    </QueryClientProvider>
-    <Toaster position="top-center" reverseOrder={true} />
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <Global styles={globalStyles} />
+          <BrowserRouter>
+            <Routes>
+              <Route path="*" element={<EnterScreen />}>
+                <Route path="incarnations" element={<IncarnationsList />} />
+                <Route path="incarnations/create" element={<CreateIncarnationForm />} />
+                <Route path="incarnations/:id" element={<EditIncarnationForm />} />
+                <Route path="*" element={<Navigate to="/incarnations" />} />
+              </Route>
+              <Route path="/login" element={<Login />} />
+            </Routes>
+          </BrowserRouter>
+        </ThemeProvider>
+        <ReactQueryDevtools position="bottom-right" />
+      </QueryClientProvider>
+      <Toaster position="top-center" reverseOrder={true} />
     </>
   )
 }

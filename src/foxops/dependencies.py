@@ -1,17 +1,22 @@
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import SecretStr
-from fastapi import Depends, HTTPException, Request, status, APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security.api_key import APIKeyHeader
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import foxops.reconciliation as reconciliation
+from foxops.auth import get_hoster_token
 from foxops.database import DAL
 from foxops.hosters import Hoster
-from foxops.hosters.gitlab import GitLab, GitLabSettings, get_gitlab_settings, get_gitlab_auth_router
+from foxops.hosters.gitlab import (
+    GitLab,
+    GitLabSettings,
+    get_gitlab_auth_router,
+    get_gitlab_settings,
+)
 from foxops.settings import DatabaseSettings, Settings
-from foxops.auth import get_hoster_token
 
 # NOTE: Yes, you may absolutely use proper dependency injection at some point.
 

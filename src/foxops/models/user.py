@@ -1,9 +1,11 @@
-from pydantic import BaseModel, EmailStr, AnyUrl
-from typing import Optional, List
+from typing import List, Optional
+
+from pydantic import AnyUrl, BaseModel, EmailStr
 
 
 class User(BaseModel):
     """User information out of OIDC. Minimum is email address"""
+
     email: EmailStr
     name: Optional[str] = None
     nickname: Optional[str] = None

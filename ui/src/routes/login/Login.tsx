@@ -28,7 +28,6 @@ const FormComponent = styled.form({
   }
 })
 
-
 export const Login = () => {
   const loginRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
@@ -41,7 +40,7 @@ export const Login = () => {
 
   useEffect(() => {
     if (code && state) getToken()
-  },[])
+  }, [])
 
   if (token) return (<Navigate to="/incarnations" />)
 
@@ -49,10 +48,10 @@ export const Login = () => {
     if (code && state) {
       setLoading(true)
       try {
-        let token = await auth.fetchToken(code, state)
+        const token = await auth.fetchToken(code, state)
         api.setToken(token)
         setToken(token)
-      } catch(error) {
+      } catch (error) {
         console.log('error', error)
         setError('Invalid token')
         loginRef.current?.focus()

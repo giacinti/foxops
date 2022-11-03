@@ -1,15 +1,16 @@
-from typing import Optional, Dict
-from pydantic import AnyUrl, ValidationError
 from functools import cache
-from starlette.responses import RedirectResponse
+from typing import Dict, Optional
+
 from authlib.integrations.starlette_client import OAuth, OAuthError  # type: ignore
 from authlib.oidc.core.claims import UserInfo  # type: ignore
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
+from pydantic import AnyUrl, ValidationError
+from starlette.responses import RedirectResponse
 
-from foxops.models import User
-from foxops.jwt import JWTTokenData, get_jwt_settings, create_jwt_token
-from foxops.auth import AuthHTTPException, AuthData
+from foxops.auth import AuthData, AuthHTTPException
+from foxops.jwt import JWTTokenData, create_jwt_token, get_jwt_settings
 from foxops.logger import get_logger
+from foxops.models import User
 
 from .settings import GitLabSettings, get_gitlab_settings
 
@@ -31,38 +32,38 @@ def get_oauth_gitlab(settings: GitLabSettings = Depends(get_gitlab_settings)):
     conf_url = f"{settings.address}/.well-known/openid-configuration"
     # object is cached in OAuth registry
     return oauth.register(
-        name='gitlab',
+        name="gitlab",
         server_metadata_url=conf_url,
         client_id=settings.client_id,
         client_secret=settings.client_secret.get_secret_value(),
-        client_kwargs={
-            'scope': settings.client_scope
-        }
+        client_kwargs={"scope": settings.client_scope},
     )
 
 
-@router.get('/login')
-async def login(request: Request,
-                redirect_uri: Optional[AnyUrl] = None,
-                gitlab=Depends(get_oauth_gitlab),
-                ) -> RedirectResponse:
+@router.get("/login")
+async def login(
+    request: Request,
+    redirect_uri: Optional[AnyUrl] = None,
+    gitlab=Depends(get_oauth_gitlab),
+) -> RedirectResponse:
     """Redirects to hoster login page.
     *redirect_uri* is the uri called back with authorization code when user is authenticated,
     if empty it will use */token*
     """
-    redir: str = request.url_for('token')
+    redir: str = request.url_for("token")
     if redirect_uri:
         redir = str(redirect_uri)
     return await gitlab.authorize_redirect(request, redir)  # type: ignore
 
 
-@router.get('/token')
-async def token(request: Request,
-                code: str,  # not used but here for proper openapi documentation
-                state: str,  # idem
-                gitlab=Depends(get_oauth_gitlab),
-                jwt_settings=Depends(get_jwt_settings),
-                ) -> str:
+@router.get("/token")
+async def token(
+    request: Request,
+    code: str,  # not used but here for proper openapi documentation
+    state: str,  # idem
+    gitlab=Depends(get_oauth_gitlab),
+    jwt_settings=Depends(get_jwt_settings),
+) -> str:
     """Gemerates JWT token to be used by fronted for authorization.
     This route is called back by hoster authentication page.
     *code* is used to request an access token for this user
@@ -75,15 +76,11 @@ async def token(request: Request,
         user = User(**user_info)
         # TODO: get scopes from database?
         # scopes is foxops specific - TBD
-        user.scopes = ['user']
+        user.scopes = ["user"]
         # we cache hoster token in AuthData registry
         # we cannot afford to expose the token in the JWT token (JWT token are not encrypted)
         await AuthData.register(
-            AuthData(
-                user=user,
-                hoster_token=access_token['access_token'],
-                refresh_token=access_token['refresh_token']
-            )
+            AuthData(user=user, hoster_token=access_token["access_token"], refresh_token=access_token["refresh_token"])
         )
     except (OAuthError, ValidationError) as e:
         raise AuthHTTPException(detail=f"{e}")

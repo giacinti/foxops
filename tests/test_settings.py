@@ -1,9 +1,8 @@
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from foxops.settings import Settings
-from foxops.settings import DatabaseSettings
 from foxops.hosters.gitlab import GitLabSettings
+from foxops.settings import DatabaseSettings, Settings
 
 
 @pytest.mark.filterwarnings('ignore:directory "/var/run/secrets/foxops" does not exist')

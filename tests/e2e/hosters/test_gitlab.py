@@ -2,10 +2,10 @@ import base64
 import uuid
 from collections import namedtuple
 from datetime import timedelta
-from pydantic import SecretStr
 
 import pytest
 from httpx import AsyncClient, HTTPStatusError
+from pydantic import SecretStr
 from tenacity import retry
 from tenacity.retry import retry_if_exception_type
 from tenacity.stop import stop_after_delay
@@ -78,9 +78,9 @@ build:
 
 @pytest.fixture(name="test_gitlab_hoster")
 async def create_test_gitlab_hoster(gitlab_test_address: str, gitlab_test_user_token: str) -> Hoster:
-    settings: GitLabSettings = GitLabSettings(address=gitlab_test_address,
-                                              client_id="FIXME",
-                                              client_secret=SecretStr("FIXME"))
+    settings: GitLabSettings = GitLabSettings(
+        address=gitlab_test_address, client_id="FIXME", client_secret=SecretStr("FIXME")
+    )
     return GitLab(settings, SecretStr(gitlab_test_user_token))
 
 

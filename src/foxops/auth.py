@@ -1,22 +1,26 @@
-from pydantic import BaseModel, SecretStr, ValidationError, EmailStr
-from typing import Optional, ClassVar
-from fastapi import HTTPException, status, Depends, Header
+from typing import ClassVar, Optional
+
+from aiocache import Cache  # type: ignore
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import SecurityScopes
 from fastapi.security.utils import get_authorization_scheme_param
-from aiocache import Cache  # type: ignore
+from pydantic import BaseModel, EmailStr, SecretStr, ValidationError
 
+from foxops.jwt import (
+    JWTError,
+    JWTSettings,
+    JWTTokenData,
+    decode_jwt_token,
+    get_jwt_settings,
+)
 from foxops.models import User
-from foxops.jwt import JWTSettings, JWTTokenData, JWTError, get_jwt_settings, decode_jwt_token
 
 
 class AuthHTTPException(HTTPException):
     """Authorization HTTP exception"""
+
     def __init__(self, **kwargs):
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={'WWW-Authenticate': 'Bearer'},
-            **kwargs
-        )
+        super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"}, **kwargs)
 
 
 class AuthData(BaseModel):
@@ -26,6 +30,7 @@ class AuthData(BaseModel):
     Data is cached locally, user email address is used as key
     It is necessary to avoid exposing hoster token
     """
+
     cache: ClassVar[Optional[Cache]] = None
 
     user: User
@@ -38,24 +43,25 @@ class AuthData(BaseModel):
         return cls.cache
 
     @classmethod
-    async def register(cls, data: 'AuthData') -> Optional['AuthData']:
+    async def register(cls, data: "AuthData") -> Optional["AuthData"]:
         ret = None
         if cls.cache:
             ret = await cls.cache.set(data.user.email, data)  # type: ignore
         return ret
 
     @classmethod
-    async def get(cls, user: User) -> Optional['AuthData']:
+    async def get(cls, user: User) -> Optional["AuthData"]:
         data = None
         if cls.cache:
             data = await cls.cache.get(user.email)  # type: ignore
         return data
 
 
-async def get_auth_data(*,
-                        authorization: str = Header(None),
-                        jwt_settings: JWTSettings = Depends(get_jwt_settings),
-                        ) -> AuthData:
+async def get_auth_data(
+    *,
+    authorization: str = Header(None),
+    jwt_settings: JWTSettings = Depends(get_jwt_settings),
+) -> AuthData:
     """extracts user email from JWT token and use it as key to get authorization data"""
     scheme, token = get_authorization_scheme_param(authorization)
     if scheme.lower() != "bearer":
@@ -74,17 +80,14 @@ async def get_auth_data(*,
     return auth_data
 
 
-async def get_hoster_token(*,
-                           auth_data: AuthData = Depends(get_auth_data)
-                           ) -> Optional[SecretStr]:
+async def get_hoster_token(*, auth_data: AuthData = Depends(get_auth_data)) -> Optional[SecretStr]:
     """returns hoster authoization token"""
     return auth_data.hoster_token
 
 
-async def get_current_user(*,
-                           security_scopes: SecurityScopes,
-                           auth_data: AuthData = Depends(get_auth_data)
-                           ) -> Optional[User]:
+async def get_current_user(
+    *, security_scopes: SecurityScopes, auth_data: AuthData = Depends(get_auth_data)
+) -> Optional[User]:
     """current user - check if she has enough permissions (scopes)"""
     user = auth_data.user
     for scope in security_scopes.scopes:

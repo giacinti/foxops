@@ -1,7 +1,7 @@
 import asyncio
 import base64
-import shutil
 import os
+import shutil
 import stat
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -10,9 +10,9 @@ from pathlib import Path
 from tempfile import mkdtemp
 from typing import AsyncIterator, TypedDict
 from urllib.parse import quote_plus
-from pydantic import SecretStr
 
 import httpx
+from pydantic import SecretStr
 from tenacity import retry
 from tenacity.retry import retry_if_exception_type
 from tenacity.stop import stop_after_delay
@@ -86,7 +86,7 @@ class GitLab:
         self.__client: httpx.AsyncClient = httpx.AsyncClient(
             base_url=self.api_address,
             headers={"Authorization": f"Bearer {token.get_secret_value()}"},
-            timeout=httpx.Timeout(120)
+            timeout=httpx.Timeout(120),
         )
 
     @property
