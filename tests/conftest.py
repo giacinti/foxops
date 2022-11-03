@@ -68,7 +68,8 @@ def create_dummy_frontend(tmp_path_factory: pytest.TempPathFactory):
 @pytest.fixture(scope="module", autouse=True)
 def set_settings_env():
     os.environ["FOXOPS_GITLAB_ADDRESS"] = "https://nonsense.com/api/v4"
-    os.environ["FOXOPS_GITLAB_TOKEN"] = "nonsense"
+    os.environ["FOXOPS_GITLAB_CLIENT_ID"] = "nonsense"
+    os.environ["FOXOPS_GITLAB_CLIENT_SECRET"] = "nonsense"
 
 
 @pytest.fixture(name="app")
