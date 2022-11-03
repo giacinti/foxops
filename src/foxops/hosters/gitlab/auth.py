@@ -24,6 +24,10 @@ oauth = OAuth()
 
 
 def get_oauth_gitlab(settings: GitLabSettings = Depends(get_gitlab_settings)):
+    """returns the Gitlab authlib client, configured from oidc well-known.
+    The function depends on *Gitlab settings*
+    authlib is caching the object is a registry, object is created at first call
+    """
     conf_url = f"{settings.address}/.well-known/openid-configuration"
     # object is cached in OAuth registry
     return oauth.register(
@@ -42,6 +46,10 @@ async def login(request: Request,
                 redirect_uri: Optional[AnyUrl] = None,
                 gitlab=Depends(get_oauth_gitlab),
                 ) -> RedirectResponse:
+    """Redirects to hoster login page.
+    *redirect_uri* is the uri called back with authorization code when user is authenticated,
+    if empty it will use */token*
+    """
     redir: str = request.url_for('token')
     if redirect_uri:
         redir = str(redirect_uri)
@@ -55,12 +63,21 @@ async def token(request: Request,
                 gitlab=Depends(get_oauth_gitlab),
                 jwt_settings=Depends(get_jwt_settings),
                 ) -> str:
+    """Gemerates JWT token to be used by fronted for authorization.
+    This route is called back by hoster authentication page.
+    *code* is used to request an access token for this user
+    """
     try:
+        # we get access token from hoster, it provides authorization & refresh token
         access_token: Dict = await gitlab.authorize_access_token(request)  # type: ignore
+        # gather user info from oidc endpoint
         user_info: UserInfo = await gitlab.userinfo(token=access_token)
         user = User(**user_info)
         # TODO: get scopes from database?
+        # scopes is foxops specific - TBD
         user.scopes = ['user']
+        # we cache hoster token in AuthData registry
+        # we cannot afford to expose the token in the JWT token (JWT token are not encrypted)
         await AuthData.register(
             AuthData(
                 user=user,
@@ -71,10 +88,13 @@ async def token(request: Request,
     except (OAuthError, ValidationError) as e:
         raise AuthHTTPException(detail=f"{e}")
 
+    # we generate a JWT token for the frontend
+    # user_email is used as key for the cache
     data = JWTTokenData(sub=user.email, scopes=user.scopes)
     return create_jwt_token(settings=jwt_settings, data=data)
 
 
 @cache
 def get_gitlab_auth_router() -> APIRouter:
+    """returns Gitlab authentication routes."""
     return router
