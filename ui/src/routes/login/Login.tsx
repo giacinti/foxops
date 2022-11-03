@@ -1,6 +1,6 @@
 import styled from '@emotion/styled'
 // import Alert from '@mui/material/Alert' - would be nice but not working for now... :-(
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../../stores/auth'
 import { Button } from '../../components/common/Button/Button'
