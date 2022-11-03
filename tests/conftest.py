@@ -5,6 +5,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from typing import AsyncGenerator
+from pydantic import EmailStr
 
 import pytest
 from fastapi import FastAPI
@@ -15,6 +16,9 @@ from foxops.__main__ import FRONTEND_SUBDIRS, create_app
 from foxops.database import DAL
 from foxops.dependencies import get_dal
 from foxops.logger import setup_logging
+from foxops.models import User
+from foxops.auth import AuthData
+from foxops.jwt import JWTSettings, JWTTokenData, create_jwt_token
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -62,10 +66,9 @@ def create_dummy_frontend(tmp_path_factory: pytest.TempPathFactory):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def set_settings_env(static_api_token: str):
+def set_settings_env():
     os.environ["FOXOPS_GITLAB_ADDRESS"] = "https://nonsense.com/api/v4"
     os.environ["FOXOPS_GITLAB_TOKEN"] = "nonsense"
-    os.environ["FOXOPS_STATIC_TOKEN"] = static_api_token
 
 
 @pytest.fixture(name="app")
@@ -82,9 +85,28 @@ async def create_dal(test_async_engine: AsyncEngine) -> AsyncGenerator[DAL, None
     yield dal
 
 
+@pytest.fixture(name="static_hoster_token", scope="session")
+def get_static_hoster_token() -> str:
+    return "test-hoster-token"
+
+
+@pytest.fixture(name="static_refresh_token", scope="session")
+def get_static_refresh_token() -> str:
+    return "test-refresh-token"
+
+
+@pytest.fixture(name="jwt_settings", scope="session")
+def get_jwt_settings() -> JWTSettings:
+    return JWTSettings()  # default values are ok for testing
+
+
 @pytest.fixture(name="static_api_token", scope="session")
-def get_static_api_token() -> str:
-    return "test-token"
+async def get_static_api_token(static_hoster_token, static_refresh_token, jwt_settings) -> AsyncGenerator[str, None]:
+    user: User = User(email=EmailStr("test-user@nonsense.com"), scopes=["user"])
+    await AuthData.register(AuthData(user=user, hoster_token=static_hoster_token, refresh_token=static_refresh_token))
+    data = JWTTokenData(sub=user.email, scopes=user.scopes)
+    token = create_jwt_token(settings=jwt_settings, data=data)
+    yield token
 
 
 @pytest.fixture(name="unauthenticated_client")
