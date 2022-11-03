@@ -6,7 +6,7 @@ import stat
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from http import HTTPStatus
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import mkdtemp
 from typing import AsyncIterator, TypedDict
 from urllib.parse import quote_plus
@@ -110,7 +110,7 @@ class GitLab:
         if not await self.__project_exists(incarnation_repository):
             raise IncarnationRepositoryNotFound(incarnation_repository)
 
-        fengine_config_file = Path(target_directory, ".fengine.yaml")
+        fengine_config_file = PurePosixPath(target_directory, ".fengine.yaml")  # Gitlab url uses Posix syntax
         response = await self.client.get(
             f"/projects/{quote_plus(incarnation_repository)}/repository/files/{quote_plus(str(fengine_config_file))}",
             params={"ref": "main"},

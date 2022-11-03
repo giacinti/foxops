@@ -2,7 +2,6 @@ from typing import ClassVar, Optional
 
 from aiocache import Cache  # type: ignore
 from fastapi import Depends, Header, HTTPException, status
-from fastapi.security import SecurityScopes
 from fastapi.security.utils import get_authorization_scheme_param
 from pydantic import BaseModel, EmailStr, SecretStr, ValidationError
 
@@ -59,38 +58,26 @@ class AuthData(BaseModel):
 
 async def get_auth_data(
     *,
-    authorization: str = Header(None),
+    authorization: str = Header(None, include_in_schema=False),
     jwt_settings: JWTSettings = Depends(get_jwt_settings),
 ) -> AuthData:
     """extracts user email from JWT token and use it as key to get authorization data"""
+    if not authorization:
+        raise AuthHTTPException(detail="Missing Authorization header")
     scheme, token = get_authorization_scheme_param(authorization)
     if scheme.lower() != "bearer":
-        raise AuthHTTPException(detail="token scheme must be Bearer")
+        raise AuthHTTPException(detail="Token scheme must be Bearer")
+    if token == "":
+        raise AuthHTTPException(detail="Missing token")
     try:
         token_data: Optional[JWTTokenData] = decode_jwt_token(jwt_settings, token)
         if not token_data:
-            raise AuthHTTPException(detail="unable to decode jwt token")
+            raise AuthHTTPException(detail="Unable to decode jwt token")
         auth_data: Optional[AuthData] = await AuthData.get(User(email=EmailStr(token_data.sub)))
     except (ValidationError, JWTError) as e:
         raise AuthHTTPException(detail=f"{e}")
 
     if not auth_data:
-        raise AuthHTTPException(detail=f"user {token_data.sub} not found")
+        raise AuthHTTPException(detail=f"User {token_data.sub} not found")
 
     return auth_data
-
-
-async def get_hoster_token(*, auth_data: AuthData = Depends(get_auth_data)) -> Optional[SecretStr]:
-    """returns hoster authoization token"""
-    return auth_data.hoster_token
-
-
-async def get_current_user(
-    *, security_scopes: SecurityScopes, auth_data: AuthData = Depends(get_auth_data)
-) -> Optional[User]:
-    """current user - check if she has enough permissions (scopes)"""
-    user = auth_data.user
-    for scope in security_scopes.scopes:
-        if scope not in user.scopes:
-            raise AuthHTTPException(detail=f"not enough permissions (missing scope={scope})")
-    return user

@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 from fastapi.responses import PlainTextResponse
 
-from foxops.dependencies import get_hoster_auth_router, hoster_token_auth_scheme
+from foxops.dependencies import (
+    get_current_user,
+    get_hoster_auth_router,
+    get_hoster_token,
+)
 
 #: Holds the router for the version endpoint
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -10,7 +14,8 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 router.include_router(get_hoster_auth_router())
 
 
-# FIXME: we probably can get rid of it now...
-@router.get("/test", response_class=PlainTextResponse, dependencies=[Depends(hoster_token_auth_scheme)])
+@router.get(
+    "/test", response_class=PlainTextResponse, dependencies=[Depends(get_hoster_token), Security(get_current_user)]
+)
 def test_authentication_route():
     return "OK"

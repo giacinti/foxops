@@ -2,9 +2,13 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Response, Security, status
 
-from foxops.auth import get_current_user
 from foxops.database import DAL
-from foxops.dependencies import get_dal, get_hoster, get_reconciliation
+from foxops.dependencies import (
+    get_current_user,
+    get_dal,
+    get_hoster,
+    get_reconciliation,
+)
 from foxops.errors import IncarnationAlreadyInitializedError, IncarnationNotFoundError
 from foxops.hosters import Hoster
 from foxops.logger import bind, get_logger
@@ -152,6 +156,10 @@ async def create_incarnation(
         status.HTTP_200_OK: {
             "description": "The actual state of the incarnation from the inventory",
             "model": IncarnationWithDetails,
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Could not validate credentials",
+            "model": AuthError,
         },
         status.HTTP_404_NOT_FOUND: {
             "description": "The incarnation was not found in the inventory",
