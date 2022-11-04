@@ -2,10 +2,10 @@ import base64
 import os
 import uuid
 from urllib.parse import quote_plus
-from pydantic import SecretStr
 
 import pytest
 from httpx import AsyncClient, Client, Timeout
+from pydantic import SecretStr
 
 #: Holds settings for the GitLab test instance
 GITLAB_ADDRESS = "http://127.0.0.1:5002/api/v4"
@@ -57,6 +57,8 @@ def create_gitlab_test_user(test_run_id: str):
 
 
 # override static token in unit tests conftest
+# this is a trick as we use a personal access token rather than a temp access token
+# it is anyway relevant for the test as both type of token are functionally identical
 @pytest.fixture(name="static_hoster_token", scope="session")
 def get_static_hoster_token(gitlab_test_user_token) -> SecretStr:
     return SecretStr(gitlab_test_user_token)
