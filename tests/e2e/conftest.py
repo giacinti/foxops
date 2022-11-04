@@ -9,6 +9,8 @@ from httpx import AsyncClient, Client, Timeout
 #: Holds settings for the GitLab test instance
 GITLAB_ADDRESS = "http://127.0.0.1:5002/api/v4"
 GITLAB_ADMIN_TOKEN = "ACCTEST1234567890123"
+GITLAB_CLIENT_ID = "1234567890abcdeffedcba0987654321"
+GITLAB_CLIENT_SECRET = "FOXOPS1234567890"
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +20,9 @@ def gitlab_test_address() -> str:
 
 @pytest.fixture(scope="session", name="gitlab_test_user_token")
 def create_gitlab_test_user(test_run_id: str):
-    client = Client(base_url=GITLAB_ADDRESS, headers={"PRIVATE-TOKEN": GITLAB_ADMIN_TOKEN}, timeout=Timeout(120))
+    client = Client(
+        base_url=GITLAB_ADDRESS, headers={"Authorization": f"Bearer {GITLAB_ADMIN_TOKEN}"}, timeout=Timeout(120)
+    )
 
     test_user_name = f"foxops-test-{test_run_id}"
     response = client.post(
@@ -54,8 +58,8 @@ def create_gitlab_test_user(test_run_id: str):
 @pytest.fixture(scope="session", autouse=True)
 def set_settings_env(gitlab_test_user_token: str, static_api_token: str):
     os.environ["FOXOPS_GITLAB_ADDRESS"] = GITLAB_ADDRESS
-    os.environ["FOXOPS_GITLAB_TOKEN"] = gitlab_test_user_token
-    os.environ["FOXOPS_STATIC_TOKEN"] = static_api_token
+    os.environ["FOXOPS_GITLAB_CLIENT_ID"] = GITLAB_CLIENT_ID
+    os.environ["FOXOPS_GITLAB_CLIENT_SECRET"] = GITLAB_CLIENT_SECRET
 
 
 @pytest.fixture(name="gitlab_test_client")

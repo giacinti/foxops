@@ -28,6 +28,22 @@ test -f $done || {
     printf 'terraform_token.save!;'
   ) | gitlab-rails console
 
+  echo 'Creating oauth application'
+  (
+    printf 'foxops_app = Doorkeeper::Application.create('
+    printf 'id: 1, '
+    printf 'name: "foxops", '
+    printf 'uid: "1234567890abcdeffedcba0987654321", '
+    printf 'secret: "FOXOPS1234567890", '
+    printf 'redirect_uri: "http://127.0.0.1:5001/login\r\nhttp://127.0.0.1:5001/auth/token", '
+    printf 'scopes: "api openid profile email", '
+    printf 'owner_id: 1, '
+    printf 'owner_type: "User", '
+    printf 'trusted: true, '
+    printf 'confidential: true);'
+    printf 'foxops_app.save!;'
+  ) | gitlab-rails console
+  
   # 2020-09-07: Currently Gitlab (version 13.3.6 ) doesn't allow in admin API
   # ability to set a group as instance level templates.
   # To test resource_gitlab_project_test template features we add
