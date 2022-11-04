@@ -64,7 +64,7 @@ async def token(
     gitlab=Depends(get_oauth_gitlab),
     jwt_settings=Depends(get_jwt_settings),
 ) -> str:
-    """Gemerates JWT token to be used by fronted for authorization.
+    """Generates JWT token to be used by fronted for authorization.
     This route is called back by hoster authentication page.
     *code* is used to request an access token for this user
     """
@@ -78,7 +78,7 @@ async def token(
         # scopes is foxops specific - TBD
         user.scopes = ["user"]
         # we cache hoster token in AuthData registry
-        # we cannot afford to expose the token in the JWT token (JWT token are not encrypted)
+        # we cannot afford to expose the access token in the JWT token (JWT token is not encrypted)
         await AuthData.register(
             AuthData(user=user, hoster_token=access_token["access_token"], refresh_token=access_token["refresh_token"])
         )

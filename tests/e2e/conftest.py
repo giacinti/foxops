@@ -2,6 +2,7 @@ import base64
 import os
 import uuid
 from urllib.parse import quote_plus
+from pydantic import SecretStr
 
 import pytest
 from httpx import AsyncClient, Client, Timeout
@@ -53,6 +54,12 @@ def create_gitlab_test_user(test_run_id: str):
     finally:
         response = client.delete(f"/users/{user_id}")
         response.raise_for_status()
+
+
+# override static token in unit tests conftest
+@pytest.fixture(name="static_hoster_token", scope="session")
+def get_static_hoster_token(gitlab_test_user_token) -> SecretStr:
+    return SecretStr(gitlab_test_user_token)
 
 
 @pytest.fixture(scope="session", autouse=True)
