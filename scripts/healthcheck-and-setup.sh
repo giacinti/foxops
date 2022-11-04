@@ -26,7 +26,7 @@ test -f $done || {
     printf 'name: :terraform);'
     printf "terraform_token.set_token('ACCTEST1234567890123');"
     printf 'terraform_token.save!;'
-  ) | gitlab-rails console
+  ) | gitlab-rails runner -
 
   echo 'Creating oauth application'
   (
@@ -42,7 +42,7 @@ test -f $done || {
     printf 'trusted: true, '
     printf 'confidential: true);'
     printf 'foxops_app.save!;'
-  ) | gitlab-rails console
+  ) | gitlab-rails runner -
   
   # 2020-09-07: Currently Gitlab (version 13.3.6 ) doesn't allow in admin API
   # ability to set a group as instance level templates.
@@ -69,7 +69,7 @@ test -f $done || {
     printf 'id: 999};'
     printf 'project = ::Projects::CreateService.new(User.find_by_username("root"), attrs).execute;'
     printf 'project.saved?;'
-  ) | gitlab-rails console
+  ) | gitlab-rails runner -
 
   touch $done
 }
