@@ -1,11 +1,17 @@
 version: '3'
 
 services:
+  init-ssl:
+    image: alpine/openssl
+    volumes:
+      - ssl-ee:/gitlab
+    command: req -x509 -newkey rsa:4096 -keyout /gitlab/127.0.0.1.key -out /gitlab/127.0.0.1.crt -sha256 -days 365 -nodes -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'
+
   gitlab-ee:
     image: gitlab/gitlab-ee:${GITLAB_EE_VERSION:-latest}
     restart: always
     ports:
-      - 5002:80
+      - 5443:5443
     environment:
       GITLAB_ROOT_PASSWORD: adminadmin
     labels:
@@ -14,12 +20,16 @@ services:
       - config-ee:/etc/gitlab
       - logs-ee:/var/log/gitlab
       - data-ee:/var/opt/gitlab
+      - ssl-ee:/etc/gitlab/ssl
       - ${PWD}/scripts/healthcheck-and-setup.sh:/healthcheck-and-setup.sh:Z
       - ${PWD}/scripts/gitlab.rb:/etc/gitlab/gitlab.rb:ro
     healthcheck:
       test: /healthcheck-and-setup.sh
       interval: 10s
       timeout: 2m
+    depends_on:
+      init-ssl:
+        condition: service_completed_successfully
 
 volumes:
   config-ce:
@@ -28,3 +38,4 @@ volumes:
   config-ee:
   logs-ee:
   data-ee:
+  ssl-ee:
