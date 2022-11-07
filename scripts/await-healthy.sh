@@ -11,5 +11,5 @@ echo
 echo 'GitLab is healthy'
 
 # Print the version, since it is useful debugging information.
-curl --insecure --silent --show-error --header 'Authorization: Bearer ACCTEST1234567890123' https://127.0.0.1:5443/api/v4/version
+curl --insecure --silent --show-error --header 'Authorization: Bearer ACCTEST1234567890123' https://${GITLAB_URL:-localhost}:${GITLAB_PORT:-5443}/api/v4/version
 echo
